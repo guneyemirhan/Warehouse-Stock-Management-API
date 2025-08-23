@@ -4,8 +4,10 @@ import com.project.warehouse_stock_management_api.security.JwtAuthenticationFilt
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -33,8 +35,14 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Spring Security'e, kullanıcıları doğrulamak için hangi servisi (UserDetailsService)
-    // ve hangi şifreleme algoritmasını (PasswordEncoder) kullanacağını söyleyen bir "sağlayıcı".
+    // YENİ EKLENEN METOT
+    // Bu, Spring'e AuthenticationManager'ı nasıl oluşturacağını söyler.
+    // AuthController'da @Autowired ile bu bean'i kullanabileceğiz.
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -51,11 +59,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                // Session yönetimini STATELESS yap. Her istek kendi başına doğrulanacak.
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // Kullanıcı doğrulama için bizim oluşturduğumuz sağlayıcıyı kullan.
                 .authenticationProvider(authenticationProvider())
-                // Oluşturduğumuz JWT filtresini, standart kullanıcı adı/şifre filtresinden ÖNCE çalıştır.
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
