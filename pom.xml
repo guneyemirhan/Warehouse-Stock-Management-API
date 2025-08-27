@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.3.1</version> <!-- Uyumlu bir versiyona güncelledim -->
+		<version>3.3.1</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.project</groupId>
@@ -30,6 +30,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+		<!-- YENİ EKLENEN BAĞIMLILIK -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
 
 		<!-- Veritabanı -->
 		<dependency>
@@ -45,7 +50,7 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!-- JSON Web Token (JWT) Desteği - YENİ EKLENENLER -->
+		<!-- JSON Web Token (JWT) Desteği -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
