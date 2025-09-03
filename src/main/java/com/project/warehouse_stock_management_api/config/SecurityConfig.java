@@ -53,11 +53,12 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 // --- DEĞİŞİKLİK BURADA ---
-                // Şimdilik, rol kontrolü yapmadan tüm adreslere erişime izin veriyoruz.
-                // Bu, JWT filtresini atlamaz. Kullanıcı yine de giriş yapmış (authenticated) olmalı.
-                // Ama giriş yaptıktan sonra "ROLE_ADMIN" gibi özel bir role ihtiyacı olmaz.
+                // Yetkilendirme kurallarını doğru şekilde belirliyoruz:
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
+                        // "/api/auth/**" adresleri (login, register) herkese açık.
+                        .requestMatchers("/api/auth/**").permitAll()
+                        // Geri kalan tüm adresler için kimlik doğrulaması (token) gerekli.
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
