@@ -10,6 +10,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer; // YENİ IMPORT
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -51,17 +52,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
-                // --- DEĞİŞİKLİK BURADA ---
-                // Yetkilendirme kurallarını doğru şekilde belirliyoruz:
+                // CSRF korumasını devre dışı bırakıyoruz (REST API'ler için standart)
+                .csrf(AbstractHttpConfigurer::disable)
+                // Yetkilendirme kurallarını tanımlıyoruz
                 .authorizeHttpRequests(auth -> auth
                         // "/api/auth/**" adresleri (login, register) herkese açık.
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Geri kalan tüm adresler için kimlik doğrulaması (token) gerekli.
+                        // Geri kalan tüm adresler için kimlik doğrulaması (geçerli bir token) gerekli.
                         .anyRequest().authenticated()
                 )
+                // Oturum yönetimini STATELESS yapıyoruz (her istek kendi başına doğrulanacak)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Bizim kimlik doğrulama sağlayıcımızı kullanmasını söylüyoruz
                 .authenticationProvider(authenticationProvider())
+                // Bizim JWT filtremizi, standart filtreden önce eklemesini söylüyoruz
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

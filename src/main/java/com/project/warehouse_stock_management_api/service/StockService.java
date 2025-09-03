@@ -1,7 +1,9 @@
 package com.project.warehouse_stock_management_api.service;
 
+import com.project.warehouse_stock_management_api.dto.ProductStockDto;
 import com.project.warehouse_stock_management_api.dto.StockRequest;
 import com.project.warehouse_stock_management_api.dto.StockTransferRequest;
+import com.project.warehouse_stock_management_api.dto.WarehouseReportDto;
 import com.project.warehouse_stock_management_api.model.*;
 import com.project.warehouse_stock_management_api.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class StockService {
@@ -30,7 +34,6 @@ public class StockService {
         this.userRepository = userRepository;
     }
 
-    // --- STOK GİRİŞİ İŞ MANTIĞI ---
     @Transactional
     public void addStock(StockRequest stockRequest) {
         Warehouse warehouse = warehouseRepository.findById(stockRequest.getWarehouseId())
@@ -50,11 +53,9 @@ public class StockService {
         stock.setQuantity(stock.getQuantity() + stockRequest.getQuantity());
         stockRepository.save(stock);
 
-        // Stok girişi için log oluştur ve kaydet
         createLog(null, warehouse, product, stockRequest.getQuantity(), "STOCK_ADDITION");
     }
 
-    // --- STOK TRANSFERİ İŞ MANTIĞI ---
     @Transactional
     public void transferStock(StockTransferRequest transferRequest) {
         if (transferRequest.getFromWarehouseId().equals(transferRequest.getToWarehouseId())) {
@@ -90,13 +91,10 @@ public class StockService {
         stockRepository.save(fromStock);
         stockRepository.save(toStock);
 
-        // Stok transferi için log oluştur ve kaydet
         createLog(fromWarehouse, toWarehouse, product, transferRequest.getQuantity(), "TRANSFER");
     }
 
-    // Log oluşturmak için yardımcı metot
     private void createLog(Warehouse from, Warehouse to, Product product, Integer quantity, String type) {
-        // İşlemi yapan mevcut kullanıcıyı al
         UserDetails userDetails = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String username = userDetails.getUsername();
         User currentUser = userRepository.findByUsername(username)
@@ -109,5 +107,34 @@ public class StockService {
         log.setQuantity(quantity);
         log.setMovementType(type);
         log.setMovementDate(LocalDateTime.now());
+        log.setUser(currentUser);
+
+        logRepository.save(log);
+    }
+
+    // --- GÜNCELLENMİŞ RAPORLAMA METODU ---
+    public WarehouseReportDto getStocksByWarehouse(Long warehouseId) {
+        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+                .orElseThrow(() -> new RuntimeException("Warehouse not found with id: " + warehouseId));
+
+        List<Stock> stocksInDb = stockRepository.findByWarehouseId(warehouseId);
+
+        // Veritabanından gelen Entity listesini, API için temiz bir DTO listesine dönüştür.
+        List<ProductStockDto> productStockDtos = stocksInDb.stream().map(stock -> {
+            ProductStockDto dto = new ProductStockDto();
+            dto.setProductId(stock.getProduct().getId());
+            dto.setProductSku(stock.getProduct().getSku());
+            dto.setProductName(stock.getProduct().getName());
+            dto.setQuantity(stock.getQuantity());
+            return dto;
+        }).collect(Collectors.toList());
+
+        // Final rapor DTO'sunu oluştur ve doldur.
+        WarehouseReportDto report = new WarehouseReportDto();
+        report.setWarehouseId(warehouse.getId());
+        report.setWarehouseName(warehouse.getName());
+        report.setStocks(productStockDtos);
+
+        return report;
     }
 }
