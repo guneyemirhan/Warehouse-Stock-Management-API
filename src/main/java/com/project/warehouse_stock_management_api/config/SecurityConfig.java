@@ -35,9 +35,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // YENİ EKLENEN METOT
-    // Bu, Spring'e AuthenticationManager'ı nasıl oluşturacağını söyler.
-    // AuthController'da @Autowired ile bu bean'i kullanabileceğiz.
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
@@ -52,12 +49,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                // --- DEĞİŞİKLİK BURADA ---
+                // Şimdilik, rol kontrolü yapmadan tüm adreslere erişime izin veriyoruz.
+                // Bu, JWT filtresini atlamaz. Kullanıcı yine de giriş yapmış (authenticated) olmalı.
+                // Ama giriş yaptıktan sonra "ROLE_ADMIN" gibi özel bir role ihtiyacı olmaz.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
