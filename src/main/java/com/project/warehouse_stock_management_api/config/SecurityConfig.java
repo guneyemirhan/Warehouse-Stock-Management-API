@@ -10,13 +10,14 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer; // YENİ IMPORT
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher; // YENİ IMPORT
 
 @Configuration
 @EnableWebSecurity
@@ -24,6 +25,13 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
+
+    private static final String[] SWAGGER_WHITELIST = {
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/swagger-resources/**",
+            "/swagger-resources"
+    };
 
     @Autowired
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, UserDetailsService userDetailsService) {
@@ -52,20 +60,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // CSRF korumasını devre dışı bırakıyoruz (REST API'ler için standart)
                 .csrf(AbstractHttpConfigurer::disable)
-                // Yetkilendirme kurallarını tanımlıyoruz
+                // --- DEĞİŞİKLİK BURADA ---
+                // Bu güvenlik zincirinin SADECE /api/** adreslerine uygulanacağını söylüyoruz.
+                // Swagger URL'leri (/swagger-ui.html vb.) bu kuralın tamamen DIŞINDA kalacak.
+                .securityMatcher("/api/**")
                 .authorizeHttpRequests(auth -> auth
-                        // "/api/auth/**" adresleri (login, register) herkese açık.
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Geri kalan tüm adresler için kimlik doğrulaması (geçerli bir token) gerekli.
                         .anyRequest().authenticated()
                 )
-                // Oturum yönetimini STATELESS yapıyoruz (her istek kendi başına doğrulanacak)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // Bizim kimlik doğrulama sağlayıcımızı kullanmasını söylüyoruz
                 .authenticationProvider(authenticationProvider())
-                // Bizim JWT filtremizi, standart filtreden önce eklemesini söylüyoruz
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
